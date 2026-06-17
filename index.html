@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Initials Game</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5F4F0;--card:#FFFFFF;--border:rgba(0,0,0,.10);--border-strong:rgba(0,0,0,.18);
+  --text:#111;--text-muted:#666;--text-faint:#999;
+  --board-bg:#141414;--board-text:#E8A020;
+  --amber:#E8A020;--amber-light:#FDF0D5;
+  --green:#2D6A2D;--green-light:#EAF3EA;
+  --red:#C0392B;--red-light:#FAEAEA;
+  --blue:#185FA5;--blue-light:#E6F0FA;
+  --radius:10px;--radius-sm:6px
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:3rem}
+
+/* HEADER */
+.hdr{background:var(--board-bg);padding:.9rem 1.25rem;display:flex;align-items:center;justify-content:space-between}
+.hdr-title{font-size:19px;font-weight:700;color:var(--board-text);letter-spacing:.05em}
+.hdr-title span{color:#fff;font-weight:400}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.mode-pill{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 10px;border-radius:20px;cursor:pointer;border:1px solid #333;color:#aaa;
+  background:transparent;transition:all .15s;font-family:inherit}
+.mode-pill.daily-active{background:#1a3a1a;color:#5aaa5a;border-color:#2d6a2d}
+.mode-pill.free-active{background:#1a2a3a;color:#5a8aaa;border-color:#185fa5}
+.hdr-btn{background:transparent;border:none;color:#666;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px}
+.hdr-btn:hover{color:#aaa}
+
+/* SPORT TABS */
+.sport-tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.sport-tab{flex:1;min-width:68px;padding:11px 6px 9px;text-align:center;font-size:13px;font-weight:500;
+  color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;
+  background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap;
+  transition:color .15s,border-color .15s;font-family:inherit}
+.sport-tab:hover{color:var(--text)}
+.sport-tab.active{color:var(--text);border-bottom-color:var(--amber)}
+.sport-tab:disabled{opacity:.4;cursor:not-allowed}
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.sdot-mlb{background:#C0392B}.sdot-nhl{background:#1A5FAA}.sdot-nba{background:#C96A1A}.sdot-nfl{background:#2D6A2D}
+
+/* DIFFICULTY BAR */
+.diff-bar{background:var(--card);border-bottom:1px solid var(--border);padding:8px 14px;
+  display:flex;align-items:center;gap:10px}
+.diff-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);white-space:nowrap}
+.diff-btns{display:flex;gap:5px}
+.diff-btn{font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid var(--border-strong);
+  background:var(--bg);color:var(--text-muted);cursor:pointer;font-family:inherit;transition:all .12s}
+.diff-btn:hover{background:#ebebeb}
+.diff-btn.active-1{background:#EAF3EA;color:#2D6A2D;border-color:#9acc9a}
+.diff-btn.active-2{background:#E6F0FA;color:#185FA5;border-color:#8ab5e0}
+.diff-btn.active-3{background:#FAEAEA;color:#C0392B;border-color:#e0aaaa}
+.diff-desc{font-size:11px;color:var(--text-faint);margin-left:auto}
+
+/* SCOREBOARD */
+.scoreboard{background:var(--board-bg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.sc-cell{text-align:center;flex:1}
+.sc-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:3px}
+.sc-val{font-size:26px;font-weight:700;color:var(--board-text);font-variant-numeric:tabular-nums;line-height:1}
+.sc-div{width:1px;height:38px;background:#222;margin:0 2px}
+.bases-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.diamond{position:relative;width:42px;height:42px}
+.bsq{position:absolute;width:11px;height:11px;border:1.5px solid #444;transform:rotate(45deg);
+  transition:background .2s,border-color .2s;background:transparent}
+.bsq.lit{background:var(--amber);border-color:var(--amber)}
+.bsq[data-b="2"]{top:0;left:15px}.bsq[data-b="3"]{top:15px;left:0}
+.bsq[data-b="1"]{top:15px;left:30px}.bsq[data-b="h"]{top:30px;left:15px;border-color:#2a2a2a}
+.out-pips{display:flex;gap:5px;margin-top:1px}
+.opip{width:9px;height:9px;border-radius:50%;border:1.5px solid #444;background:transparent;transition:background .2s}
+.opip.used{background:#C0392B;border-color:#C0392B}
+.sc-val.green{color:#4aaa4a}.sc-val.red{color:#e05050}.sc-val.amber{color:var(--amber)}
+
+/* DAILY BANNER */
+.daily-banner{background:#0d1f0d;border-bottom:1px solid #1a3a1a;padding:8px 14px;
+  display:none;align-items:center;gap:10px}
+.daily-banner.show{display:flex}
+.daily-badge{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:#5aaa5a;background:#1a3a1a;padding:3px 9px;border-radius:4px}
+.daily-info{font-size:12px;color:#4a7a4a}
+.daily-done-banner{background:#0d1f0d;border-bottom:1px solid #1a3a1a;padding:12px 14px;
+  display:none;text-align:center}
+.daily-done-banner.show{display:block}
+.daily-done-banner p{font-size:13px;color:#4a7a4a;margin-bottom:6px}
+.daily-done-banner strong{color:#5aaa5a}
+
+/* MAIN */
+.main{max-width:540px;margin:0 auto;padding:1.1rem .9rem}
+
+/* ATHLETE CARD */
+.ath-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:.9rem}
+.card-top{padding:1.25rem 1.25rem .9rem;text-align:center;border-bottom:1px solid var(--border)}
+.sport-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:.9rem}
+.badge-mlb{background:#FAEAEA;color:#8B1A1A}
+.badge-nhl{background:#E6F0FA;color:#0D3B6E}
+.badge-nba{background:#FEF0E6;color:#8B3A0A}
+.badge-nfl{background:#EAF3EA;color:#1A4A1A}
+.initials-big{font-size:62px;font-weight:700;letter-spacing:.2em;color:var(--text);line-height:1;margin-bottom:.2rem}
+.initials-meta{font-size:11px;color:var(--text-faint);letter-spacing:.04em}
+.hints-area{padding:0}
+.hint-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;min-height:44px}
+.hint-row:last-child{border-bottom:none}
+.hint-icon{width:26px;height:26px;border-radius:5px;background:var(--bg);display:flex;
+  align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.hint-lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);min-width:54px}
+.hint-val{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.hint-locked{flex:1;font-size:13px;color:var(--text-faint)}
+.reveal-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border-strong);
+  background:var(--bg);color:var(--text-muted);cursor:pointer;font-weight:500;white-space:nowrap;
+  transition:background .1s;font-family:inherit}
+.reveal-btn:hover{background:#e8e8e8}
+.hint-cost{font-size:10px;color:var(--text-faint);margin-left:3px}
+
+/* FEEDBACK */
+.fb-bar{border-radius:var(--radius-sm);padding:9px 13px;font-size:14px;font-weight:500;
+  margin-bottom:.8rem;display:none;align-items:center;gap:8px}
+.fb-bar.hit{display:flex;background:var(--green-light);color:var(--green);border:1px solid #b5d5b5}
+.fb-bar.out{display:flex;background:var(--red-light);color:var(--red);border:1px solid #e5b5b5}
+.fb-bar.info{display:flex;background:var(--amber-light);color:#7a5010;border:1px solid #e8c87a}
+.fb-icon{font-size:16px;flex-shrink:0}
+.hit-badge{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 8px;border-radius:4px;margin-left:auto;white-space:nowrap}
+.hit-badge.hr{background:#2D6A2D;color:#fff}
+.hit-badge.triple{background:#B8800A;color:#fff}
+.hit-badge.double{background:#185FA5;color:#fff}
+.hit-badge.single{background:#555;color:#fff}
+
+/* INPUT */
+.input-wrap{display:flex;flex-direction:column;gap:7px;margin-bottom:.7rem}
+.input-row{display:flex;gap:7px}
+.guess-input{flex:1;height:43px;padding:0 13px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border-strong);font-size:15px;font-family:inherit;
+  background:var(--card);color:var(--text);outline:none;transition:border-color .15s}
+.guess-input:focus{border-color:var(--amber)}
+.guess-input:disabled{opacity:.5}
+.guess-btn{height:43px;padding:0 18px;border-radius:var(--radius-sm);border:none;
+  background:var(--board-bg);color:var(--board-text);font-size:14px;font-weight:600;
+  cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:opacity .15s}
+.guess-btn:hover{opacity:.85}
+.guess-btn:disabled{opacity:.4;cursor:default}
+.input-note{font-size:12px;color:var(--text-faint);text-align:center}
+
+/* BUTTONS */
+.action-btn{width:100%;height:43px;border-radius:var(--radius-sm);border:1.5px solid var(--border-strong);
+  background:var(--card);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;
+  font-family:inherit;transition:background .12s;margin-top:4px}
+.action-btn:hover{background:#ececec}
+.action-btn.primary{background:var(--board-bg);color:var(--board-text);border-color:var(--board-bg)}
+.action-btn.primary:hover{opacity:.9}
+
+/* LOADING */
+.loading{text-align:center;padding:2.5rem 1rem;color:var(--text-muted)}
+.spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--amber);
+  border-radius:50%;margin:0 auto .8rem;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* GAME OVER */
+.go-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.75rem 1.25rem;text-align:center;display:none}
+.go-card.show{display:block}
+.go-card h2{font-size:21px;font-weight:600;margin-bottom:.3rem}
+.go-card p{font-size:13px;color:var(--text-muted);margin-bottom:1.25rem}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1.25rem}
+.stat-cell{text-align:center}
+.stat-num{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat-num.c-hr{color:#2D6A2D}.stat-num.c-3b{color:#B8800A}.stat-num.c-2b{color:#185FA5}
+.stat-num.c-1b{color:#555}
+.stat-lbl-s{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.share-row{display:flex;gap:6px;margin-bottom:6px}
+.share-btn{flex:1;height:43px;border-radius:var(--radius-sm);border:none;
+  background:var(--board-bg);color:var(--board-text);font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:opacity .15s}
+.share-btn:hover{opacity:.85}
+.emoji-result{font-size:13px;color:var(--text-muted);letter-spacing:.1em;margin-bottom:1rem;word-break:break-all}
+
+/* HOW TO PLAY MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:none;
+  align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);max-width:440px;width:100%;padding:1.5rem;
+  max-height:90vh;overflow-y:auto}
+.modal h3{font-size:18px;font-weight:600;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1}
+.modal p,.modal li{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:.5rem}
+.modal ul{padding-left:1.2rem;margin-bottom:.75rem}
+.hit-eg{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+  padding:2px 8px;border-radius:4px;margin-right:4px}
+
+@media(max-width:480px){
+  .initials-big{font-size:48px}
+  .sc-val{font-size:22px}
+  .sport-tab{font-size:12px;padding:10px 5px 8px}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-title">THE <span>INITIALS</span> GAME</div>
+  <div class="hdr-right">
+    <button class="mode-pill daily-active" id="mode-toggle" onclick="toggleMode()">📅 Daily</button>
+    <button class="hdr-btn" onclick="showHelp()" aria-label="How to play" title="How to play">?</button>
+  </div>
+</header>
+
+<nav class="sport-tabs" role="tablist" aria-label="Select sport" id="sport-tabs">
+  <button class="sport-tab active" role="tab" data-sport="ALL" onclick="selectSport('ALL',this)">🏆 All</button>
+  <button class="sport-tab" role="tab" data-sport="MLB" onclick="selectSport('MLB',this)">
+    <span class="sdot sdot-mlb"></span>MLB</button>
+  <button class="sport-tab" role="tab" data-sport="NHL" onclick="selectSport('NHL',this)">
+    <span class="sdot sdot-nhl"></span>NHL</button>
+  <button class="sport-tab" role="tab" data-sport="NBA" onclick="selectSport('NBA',this)">
+    <span class="sdot sdot-nba"></span>NBA</button>
+  <button class="sport-tab" role="tab" data-sport="NFL" onclick="selectSport('NFL',this)">
+    <span class="sdot sdot-nfl"></span>NFL</button>
+</nav>
+
+<div class="diff-bar" id="diff-bar">
+  <span class="diff-label">Difficulty</span>
+  <div class="diff-btns">
+    <button class="diff-btn active-1" data-tier="1" onclick="setTier(1,this)">Rookie</button>
+    <button class="diff-btn" data-tier="2" onclick="setTier(2,this)">Pro</button>
+    <button class="diff-btn" data-tier="3" onclick="setTier(3,this)">Legend</button>
+  </div>
+  <span class="diff-desc" id="diff-desc">All-time greats</span>
+</div>
+
+<div class="daily-banner" id="daily-banner">
+  <span class="daily-badge">Daily</span>
+  <span class="daily-info" id="daily-info"></span>
+</div>
+
+<div class="daily-done-banner" id="daily-done-banner">
+  <p>You've already played today's puzzle. Come back tomorrow!</p>
+  <p><strong id="daily-done-date"></strong></p>
+</div>
+
+<div class="scoreboard" aria-label="Scoreboard">
+  <div class="sc-cell">
+    <div class="sc-lbl">Runs</div>
+    <div class="sc-val amber" id="sc-runs">0</div>
+  </div>
+  <div class="sc-div"></div>
+  <div class="sc-cell">
+    <div class="sc-lbl">Inning</div>
+    <div class="sc-val" id="sc-inning">1</div>
+  </div>
+  <div class="sc-div"></div>
+  <div class="sc-cell bases-wrap">
+    <div class="sc-lbl">Bases</div>
+    <div class="diamond">
+      <div class="bsq" data-b="2" id="base2"></div>
+      <div class="bsq" data-b="3" id="base3"></div>
+      <div class="bsq" data-b="1" id="base1"></div>
+      <div class="bsq" data-b="h"></div>
+    </div>
+    <div class="out-pips">
+      <div class="opip" id="op1"></div>
+      <div class="opip" id="op2"></div>
+      <div class="opip" id="op3"></div>
+    </div>
+  </div>
+  <div class="sc-div"></div>
+  <div class="sc-cell">
+    <div class="sc-lbl">HR</div>
+    <div class="sc-val green" id="sc-hr">0</div>
+  </div>
+  <div class="sc-div"></div>
+  <div class="sc-cell">
+    <div class="sc-lbl">Outs</div>
+    <div class="sc-val red" id="sc-outs">0</div>
+  </div>
+</div>
+
+<main class="main">
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading athlete…</div>
+  </div>
+
+  <div id="game-area" style="display:none">
+    <div class="ath-card">
+      <div class="card-top">
+        <div class="sport-badge" id="sport-badge"></div>
+        <div class="initials-big" id="initials-disp">—</div>
+        <div class="initials-meta" id="initials-meta"></div>
+      </div>
+      <div class="hints-area" id="hints-area"></div>
+    </div>
+
+    <div class="fb-bar" id="fb-bar">
+      <span class="fb-icon" id="fb-icon"></span>
+      <span id="fb-text"></span>
+      <span class="hit-badge" id="fb-badge" style="display:none"></span>
+    </div>
+
+    <div class="input-wrap" id="input-wrap">
+      <div class="input-row">
+        <input class="guess-input" id="guess-input" type="text"
+          placeholder="Athlete's full name…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+        <button class="guess-btn" id="guess-btn" onclick="submitGuess()">Guess</button>
+      </div>
+      <div class="input-note">Last name alone accepted · Press Enter to submit</div>
+    </div>
+
+    <button class="action-btn" id="next-btn" style="display:none" onclick="nextAthlete()">
+      Next athlete →
+    </button>
+  </div>
+
+  <div class="go-card" id="go-card">
+    <div style="font-size:44px;margin-bottom:10px">⚾</div>
+    <h2 id="go-title">3 outs — inning over!</h2>
+    <p id="go-sub">Here's your stat line:</p>
+    <div class="emoji-result" id="go-emoji"></div>
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-num c-hr" id="go-hr">0</div><div class="stat-lbl-s">HR</div></div>
+      <div class="stat-cell"><div class="stat-num c-3b" id="go-3b">0</div><div class="stat-lbl-s">3B</div></div>
+      <div class="stat-cell"><div class="stat-num c-2b" id="go-2b">0</div><div class="stat-lbl-s">2B</div></div>
+      <div class="stat-cell"><div class="stat-num c-1b" id="go-1b">0</div><div class="stat-lbl-s">1B</div></div>
+      <div class="stat-cell"><div class="stat-num" id="go-runs">0</div><div class="stat-lbl-s">Runs</div></div>
+    </div>
+    <div class="share-row">
+      <button class="share-btn" id="share-btn" onclick="shareResult()">📋 Copy result</button>
+    </div>
+    <button class="action-btn" id="new-inning-btn" onclick="newInning()">Play another inning</button>
+  </div>
+</main>
+
+<!-- HOW TO PLAY MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)hideHelp()">
+  <div class="modal">
+    <h3>How to play <button class="modal-close" onclick="hideHelp()">✕</button></h3>
+    <p>You're shown the initials of a real athlete. Guess who it is!</p>
+    <ul>
+      <li>Up to <strong>3 outs</strong> per inning — wrong guesses are outs</li>
+      <li>Reveal hints to help, but each hint lowers your max hit:</li>
+    </ul>
+    <p>
+      <span class="hit-eg" style="background:#2D6A2D;color:#fff">HR</span> No hints used<br>
+      <span class="hit-eg" style="background:#B8800A;color:#fff">3B</span> 1 hint revealed<br>
+      <span class="hit-eg" style="background:#185FA5;color:#fff">2B</span> 2 hints revealed<br>
+      <span class="hit-eg" style="background:#555;color:#fff">1B</span> All 3 hints revealed
+    </p>
+    <p style="margin-top:.75rem">Runners on base score runs as you get hits — just like real baseball!</p>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.75rem 0">
+    <p><strong>Difficulty</strong></p>
+    <ul>
+      <li><strong>Rookie</strong> — All-time legends you definitely know</li>
+      <li><strong>Pro</strong> — All-stars and franchise players</li>
+      <li><strong>Legend</strong> — Deep cuts who met the games-played threshold</li>
+    </ul>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.75rem 0">
+    <p><strong>Daily puzzle</strong> — Everyone gets the same athlete each day. One attempt, no hints deducted from the first guess. Share your result!</p>
+    <p style="margin-top:.5rem"><strong>Free play</strong> — Unlimited innings, pick your sport and difficulty.</p>
+  </div>
+</div>
+
+
+<script>
+// Full athlete database with tiers assigned
+// Tier 1 = instant recognition, Tier 2 = solid fan knowledge, Tier 3 = deep cut
+const ATHLETES = [
+  // ── MLB ──
+  {name:"Derek Jeter",sport:"MLB",pos:"Shortstop",era:"1995–2014",teams:"New York Yankees",gp:2747,tier:1},
+  {name:"Ken Griffey Jr.",sport:"MLB",pos:"Center Field",era:"1989–2010",teams:"Mariners, Reds, White Sox",gp:2671,tier:1},
+  {name:"Albert Pujols",sport:"MLB",pos:"First Base",era:"2001–2022",teams:"Cardinals, Angels, Dodgers",gp:3026,tier:1},
+  {name:"Barry Bonds",sport:"MLB",pos:"Left Field",era:"1986–2007",teams:"Pirates, Giants",gp:2986,tier:1},
+  {name:"Ichiro Suzuki",sport:"MLB",pos:"Right Field",era:"2001–2019",teams:"Mariners, Yankees, Marlins",gp:2653,tier:1},
+  {name:"Cal Ripken Jr.",sport:"MLB",pos:"Shortstop",era:"1981–2001",teams:"Baltimore Orioles",gp:3001,tier:1},
+  {name:"Mike Trout",sport:"MLB",pos:"Center Field",era:"2011–present",teams:"Los Angeles Angels",gp:1337,tier:1},
+  {name:"David Ortiz",sport:"MLB",pos:"Designated Hitter",era:"1997–2016",teams:"Twins, Red Sox",gp:2408,tier:1},
+  {name:"Alex Rodriguez",sport:"MLB",pos:"Shortstop / 3B",era:"1994–2016",teams:"Mariners, Rangers, Yankees",gp:2784,tier:1},
+  {name:"Hank Aaron",sport:"MLB",pos:"Right Field",era:"1954–1976",teams:"Braves, Brewers",gp:3298,tier:1},
+  {name:"Willie Mays",sport:"MLB",pos:"Center Field",era:"1951–1973",teams:"Giants, Mets",gp:2992,tier:1},
+  {name:"Mickey Mantle",sport:"MLB",pos:"Center Field",era:"1951–1968",teams:"New York Yankees",gp:2401,tier:1},
+  {name:"Ted Williams",sport:"MLB",pos:"Left Field",era:"1939–1960",teams:"Boston Red Sox",gp:2292,tier:1},
+  {name:"Roger Clemens",sport:"MLB",pos:"Starting Pitcher",era:"1984–2007",teams:"Red Sox, Blue Jays, Yankees",gp:709,tier:1},
+  {name:"Randy Johnson",sport:"MLB",pos:"Starting Pitcher",era:"1988–2009",teams:"Mariners, D-backs, Yankees",gp:618,tier:1},
+  {name:"Pedro Martinez",sport:"MLB",pos:"Starting Pitcher",era:"1992–2009",teams:"Expos, Red Sox, Mets",gp:476,tier:1},
+  {name:"Greg Maddux",sport:"MLB",pos:"Starting Pitcher",era:"1986–2008",teams:"Cubs, Braves, Padres",gp:744,tier:1},
+  {name:"Nolan Ryan",sport:"MLB",pos:"Starting Pitcher",era:"1966–1993",teams:"Mets, Angels, Astros, Rangers",gp:807,tier:1},
+  {name:"Mariano Rivera",sport:"MLB",pos:"Relief Pitcher",era:"1995–2013",teams:"New York Yankees",gp:1115,tier:1},
+  {name:"Manny Ramirez",sport:"MLB",pos:"Left Field",era:"1993–2011",teams:"Indians, Red Sox, Dodgers",gp:2302,tier:2},
+  {name:"Chipper Jones",sport:"MLB",pos:"Third Base",era:"1993–2012",teams:"Atlanta Braves",gp:2499,tier:2},
+  {name:"Todd Helton",sport:"MLB",pos:"First Base",era:"1997–2013",teams:"Colorado Rockies",gp:2247,tier:2},
+  {name:"Jim Thome",sport:"MLB",pos:"Third Base / 1B",era:"1991–2012",teams:"Indians, Phillies, White Sox",gp:2543,tier:2},
+  {name:"Ivan Rodriguez",sport:"MLB",pos:"Catcher",era:"1991–2011",teams:"Rangers, Marlins, Tigers",gp:2543,tier:2},
+  {name:"Craig Biggio",sport:"MLB",pos:"Second Base",era:"1988–2007",teams:"Houston Astros",gp:2850,tier:2},
+  {name:"Jeff Bagwell",sport:"MLB",pos:"First Base",era:"1991–2005",teams:"Houston Astros",gp:2150,tier:2},
+  {name:"Mike Piazza",sport:"MLB",pos:"Catcher",era:"1992–2007",teams:"Dodgers, Mets",gp:1912,tier:2},
+  {name:"Roberto Alomar",sport:"MLB",pos:"Second Base",era:"1988–2004",teams:"Blue Jays, Indians, Mets",gp:2379,tier:2},
+  {name:"Vladimir Guerrero",sport:"MLB",pos:"Right Field",era:"1996–2011",teams:"Expos, Angels, Rangers",gp:2147,tier:2},
+  {name:"Larry Walker",sport:"MLB",pos:"Right Field",era:"1989–2005",teams:"Expos, Rockies, Cardinals",gp:1988,tier:2},
+  {name:"Johnny Bench",sport:"MLB",pos:"Catcher",era:"1967–1983",teams:"Cincinnati Reds",gp:2158,tier:2},
+  {name:"Tony Gwynn",sport:"MLB",pos:"Right Field",era:"1982–2001",teams:"San Diego Padres",gp:2440,tier:2},
+  {name:"Wade Boggs",sport:"MLB",pos:"Third Base",era:"1982–1999",teams:"Red Sox, Yankees, Devil Rays",gp:2440,tier:2},
+  {name:"George Brett",sport:"MLB",pos:"Third Base",era:"1973–1993",teams:"Kansas City Royals",gp:2707,tier:2},
+  {name:"Frank Thomas",sport:"MLB",pos:"First Base",era:"1990–2008",teams:"White Sox, A's, Blue Jays",gp:2322,tier:2},
+  {name:"Ozzie Smith",sport:"MLB",pos:"Shortstop",era:"1978–1996",teams:"Padres, Cardinals",gp:2573,tier:2},
+  {name:"Ryne Sandberg",sport:"MLB",pos:"Second Base",era:"1981–1997",teams:"Cubs, Phillies",gp:2164,tier:2},
+  {name:"Mike Schmidt",sport:"MLB",pos:"Third Base",era:"1972–1989",teams:"Philadelphia Phillies",gp:2404,tier:2},
+  {name:"Don Mattingly",sport:"MLB",pos:"First Base",era:"1982–1995",teams:"New York Yankees",gp:1785,tier:2},
+  {name:"Kirby Puckett",sport:"MLB",pos:"Center Field",era:"1984–1995",teams:"Minnesota Twins",gp:1783,tier:2},
+  {name:"Roberto Clemente",sport:"MLB",pos:"Right Field",era:"1955–1972",teams:"Pittsburgh Pirates",gp:2433,tier:2},
+  {name:"Reggie Jackson",sport:"MLB",pos:"Right Field",era:"1967–1987",teams:"A's, Yankees, Angels",gp:2820,tier:2},
+  {name:"Yogi Berra",sport:"MLB",pos:"Catcher",era:"1946–1965",teams:"New York Yankees",gp:2120,tier:2},
+  {name:"Sandy Koufax",sport:"MLB",pos:"Starting Pitcher",era:"1955–1966",teams:"Brooklyn/LA Dodgers",gp:397,tier:2},
+  {name:"Tom Seaver",sport:"MLB",pos:"Starting Pitcher",era:"1967–1986",teams:"Mets, Reds, White Sox",gp:656,tier:2},
+  {name:"Paul Molitor",sport:"MLB",pos:"Third Base / DH",era:"1978–1998",teams:"Brewers, Blue Jays, Twins",gp:2683,tier:3},
+  {name:"Dave Winfield",sport:"MLB",pos:"Right Field",era:"1973–1995",teams:"Padres, Yankees, Angels",gp:2973,tier:3},
+  {name:"Rod Carew",sport:"MLB",pos:"Second Base",era:"1967–1985",teams:"Twins, Angels",gp:2469,tier:3},
+  {name:"Bob Gibson",sport:"MLB",pos:"Starting Pitcher",era:"1959–1975",teams:"St. Louis Cardinals",gp:528,tier:3},
+  {name:"Carl Yastrzemski",sport:"MLB",pos:"Left Field",era:"1961–1983",teams:"Boston Red Sox",gp:3308,tier:3},
+  {name:"Harmon Killebrew",sport:"MLB",pos:"First Base / 3B",era:"1954–1975",teams:"Senators/Twins, Royals",gp:2435,tier:3},
+  {name:"Lou Brock",sport:"MLB",pos:"Left Field",era:"1961–1979",teams:"Cubs, Cardinals",gp:2616,tier:3},
+  {name:"Gaylord Perry",sport:"MLB",pos:"Starting Pitcher",era:"1962–1983",teams:"Giants, Indians, Padres",gp:777,tier:3},
+  {name:"Luis Aparicio",sport:"MLB",pos:"Shortstop",era:"1956–1973",teams:"White Sox, Orioles, Red Sox",gp:2599,tier:3},
+  {name:"Duke Snider",sport:"MLB",pos:"Center Field",era:"1947–1964",teams:"Dodgers, Mets, Giants",gp:2143,tier:3},
+  {name:"Enos Slaughter",sport:"MLB",pos:"Right Field",era:"1938–1959",teams:"Cardinals, Yankees",gp:2380,tier:3},
+  {name:"Billy Williams",sport:"MLB",pos:"Left Field",era:"1959–1976",teams:"Cubs, A's",gp:2488,tier:3},
+  {name:"Orlando Cepeda",sport:"MLB",pos:"First Base",era:"1958–1974",teams:"Giants, Cardinals, Braves",gp:2124,tier:3},
+  {name:"Tony Perez",sport:"MLB",pos:"First Base",era:"1964–1986",teams:"Reds, Expos, Red Sox",gp:2777,tier:3},
+  {name:"Andre Dawson",sport:"MLB",pos:"Right Field",era:"1976–1996",teams:"Expos, Cubs, Red Sox",gp:2627,tier:3},
+  {name:"Gary Carter",sport:"MLB",pos:"Catcher",era:"1974–1992",teams:"Expos, Mets, Giants",gp:2296,tier:3},
+
+  // ── NHL ──
+  {name:"Wayne Gretzky",sport:"NHL",pos:"Center",era:"1979–1999",teams:"Oilers, Kings, Blues, Rangers",gp:1487,tier:1},
+  {name:"Mario Lemieux",sport:"NHL",pos:"Center",era:"1984–2006",teams:"Pittsburgh Penguins",gp:915,tier:1},
+  {name:"Sidney Crosby",sport:"NHL",pos:"Center",era:"2005–present",teams:"Pittsburgh Penguins",gp:1252,tier:1},
+  {name:"Alexander Ovechkin",sport:"NHL",pos:"Left Wing",era:"2005–present",teams:"Washington Capitals",gp:1391,tier:1},
+  {name:"Gordie Howe",sport:"NHL",pos:"Right Wing",era:"1946–1980",teams:"Red Wings, WHA, Whalers",gp:1767,tier:1},
+  {name:"Bobby Orr",sport:"NHL",pos:"Defenseman",era:"1966–1979",teams:"Bruins, Blackhawks",gp:657,tier:1},
+  {name:"Mark Messier",sport:"NHL",pos:"Center",era:"1979–2004",teams:"Oilers, Rangers, Canucks",gp:1756,tier:1},
+  {name:"Steve Yzerman",sport:"NHL",pos:"Center",era:"1983–2006",teams:"Detroit Red Wings",gp:1755,tier:1},
+  {name:"Patrick Roy",sport:"NHL",pos:"Goalie",era:"1984–2003",teams:"Canadiens, Avalanche",gp:1029,tier:1},
+  {name:"Martin Brodeur",sport:"NHL",pos:"Goalie",era:"1991–2015",teams:"Devils, Blues",gp:1266,tier:1},
+  {name:"Jaromir Jagr",sport:"NHL",pos:"Right Wing",era:"1990–2018",teams:"Penguins, Capitals, Rangers",gp:1733,tier:2},
+  {name:"Brett Hull",sport:"NHL",pos:"Right Wing",era:"1986–2004",teams:"Blues, Stars, Wings",gp:1269,tier:2},
+  {name:"Joe Sakic",sport:"NHL",pos:"Center",era:"1988–2009",teams:"Nordiques / Avalanche",gp:1378,tier:2},
+  {name:"Dominik Hasek",sport:"NHL",pos:"Goalie",era:"1990–2008",teams:"Sabres, Wings, Senators",gp:735,tier:2},
+  {name:"Teemu Selanne",sport:"NHL",pos:"Right Wing",era:"1992–2014",teams:"Jets, Ducks, Sharks",gp:1451,tier:2},
+  {name:"Peter Forsberg",sport:"NHL",pos:"Center",era:"1994–2011",teams:"Avalanche, Flyers",gp:708,tier:2},
+  {name:"Nicklas Lidstrom",sport:"NHL",pos:"Defenseman",era:"1991–2012",teams:"Detroit Red Wings",gp:1564,tier:2},
+  {name:"Ray Bourque",sport:"NHL",pos:"Defenseman",era:"1979–2001",teams:"Bruins, Avalanche",gp:1612,tier:2},
+  {name:"Mike Modano",sport:"NHL",pos:"Center",era:"1989–2011",teams:"Stars, Red Wings",gp:1499,tier:2},
+  {name:"Sergei Fedorov",sport:"NHL",pos:"Center",era:"1990–2009",teams:"Wings, Ducks, Blue Jackets",gp:1248,tier:2},
+  {name:"Eric Lindros",sport:"NHL",pos:"Center",era:"1992–2007",teams:"Flyers, Rangers, Maple Leafs",gp:760,tier:2},
+  {name:"Brendan Shanahan",sport:"NHL",pos:"Left Wing",era:"1987–2009",teams:"Devils, Blues, Wings",gp:1524,tier:2},
+  {name:"Phil Esposito",sport:"NHL",pos:"Center",era:"1963–1981",teams:"Blackhawks, Bruins, Rangers",gp:1282,tier:2},
+  {name:"Mats Sundin",sport:"NHL",pos:"Center",era:"1990–2009",teams:"Nordiques, Maple Leafs, Canucks",gp:1346,tier:2},
+  {name:"Paul Kariya",sport:"NHL",pos:"Left Wing",era:"1994–2010",teams:"Ducks, Avalanche, Predators",gp:989,tier:2},
+  {name:"Scott Niedermayer",sport:"NHL",pos:"Defenseman",era:"1991–2010",teams:"Devils, Ducks",gp:1263,tier:2},
+  {name:"Al MacInnis",sport:"NHL",pos:"Defenseman",era:"1981–2004",teams:"Flames, Blues",gp:1416,tier:3},
+  {name:"Luc Robitaille",sport:"NHL",pos:"Left Wing",era:"1986–2006",teams:"Kings, Penguins, Rangers, Wings",gp:1431,tier:3},
+  {name:"Chris Chelios",sport:"NHL",pos:"Defenseman",era:"1984–2010",teams:"Canadiens, Blackhawks, Wings",gp:1651,tier:3},
+  {name:"Nicklas Backstrom",sport:"NHL",pos:"Center",era:"2007–2024",teams:"Washington Capitals",gp:1148,tier:3},
+  {name:"Dino Ciccarelli",sport:"NHL",pos:"Right Wing",era:"1980–1999",teams:"North Stars, Capitals, Wings",gp:1232,tier:3},
+  {name:"Dale Hawerchuk",sport:"NHL",pos:"Center",era:"1981–1997",teams:"Jets, Blues, Sabres",gp:1188,tier:3},
+  {name:"Guy Lafleur",sport:"NHL",pos:"Right Wing",era:"1971–1991",teams:"Canadiens, Rangers, Nordiques",gp:1126,tier:3},
+  {name:"Denis Savard",sport:"NHL",pos:"Center",era:"1980–1997",teams:"Blackhawks, Canadiens, Lightning",gp:1196,tier:3},
+  {name:"Pierre Turgeon",sport:"NHL",pos:"Center",era:"1987–2007",teams:"Sabres, Islanders, Blues, Stars",gp:1294,tier:3},
+  {name:"Pat Verbeek",sport:"NHL",pos:"Right Wing",era:"1982–2002",teams:"Devils, Whalers, Rangers, Stars",gp:1424,tier:3},
+  {name:"Keith Tkachuk",sport:"NHL",pos:"Left Wing",era:"1991–2010",teams:"Jets/Coyotes, Blues, Thrashers",gp:1201,tier:3},
+  {name:"Jeremy Roenick",sport:"NHL",pos:"Center",era:"1988–2009",teams:"Blackhawks, Coyotes, Flyers",gp:1363,tier:3},
+  {name:"Glenn Anderson",sport:"NHL",pos:"Right Wing",era:"1980–1996",teams:"Oilers, Maple Leafs, Blues",gp:1129,tier:3},
+  {name:"Jari Kurri",sport:"NHL",pos:"Right Wing",era:"1980–1996",teams:"Oilers, Kings, Rangers",gp:1251,tier:3},
+
+  // ── NBA ──
+  {name:"Michael Jordan",sport:"NBA",pos:"Shooting Guard",era:"1984–2003",teams:"Bulls, Wizards",gp:1072,tier:1},
+  {name:"LeBron James",sport:"NBA",pos:"Small Forward",era:"2003–present",teams:"Cavaliers, Heat, Lakers",gp:1492,tier:1},
+  {name:"Kobe Bryant",sport:"NBA",pos:"Shooting Guard",era:"1996–2016",teams:"Los Angeles Lakers",gp:1346,tier:1},
+  {name:"Shaquille O'Neal",sport:"NBA",pos:"Center",era:"1992–2011",teams:"Magic, Lakers, Heat",gp:1207,tier:1},
+  {name:"Magic Johnson",sport:"NBA",pos:"Point Guard",era:"1979–1996",teams:"Los Angeles Lakers",gp:906,tier:1},
+  {name:"Larry Bird",sport:"NBA",pos:"Small Forward",era:"1979–1992",teams:"Boston Celtics",gp:897,tier:1},
+  {name:"Tim Duncan",sport:"NBA",pos:"Power Forward",era:"1997–2016",teams:"San Antonio Spurs",gp:1392,tier:1},
+  {name:"Stephen Curry",sport:"NBA",pos:"Point Guard",era:"2009–present",teams:"Golden State Warriors",gp:964,tier:1},
+  {name:"Kevin Durant",sport:"NBA",pos:"Small Forward",era:"2007–present",teams:"Thunder, Warriors, Nets",gp:1059,tier:1},
+  {name:"Dirk Nowitzki",sport:"NBA",pos:"Power Forward",era:"1998–2019",teams:"Dallas Mavericks",gp:1522,tier:2},
+  {name:"Hakeem Olajuwon",sport:"NBA",pos:"Center",era:"1984–2002",teams:"Rockets, Raptors",gp:1238,tier:2},
+  {name:"Charles Barkley",sport:"NBA",pos:"Power Forward",era:"1984–2000",teams:"76ers, Suns, Rockets",gp:1073,tier:2},
+  {name:"Karl Malone",sport:"NBA",pos:"Power Forward",era:"1985–2004",teams:"Utah Jazz, Lakers",gp:1476,tier:2},
+  {name:"John Stockton",sport:"NBA",pos:"Point Guard",era:"1984–2003",teams:"Utah Jazz",gp:1504,tier:2},
+  {name:"Patrick Ewing",sport:"NBA",pos:"Center",era:"1985–2002",teams:"Knicks, SuperSonics",gp:1183,tier:2},
+  {name:"Scottie Pippen",sport:"NBA",pos:"Small Forward",era:"1987–2004",teams:"Bulls, Rockets, Blazers",gp:1178,tier:2},
+  {name:"Allen Iverson",sport:"NBA",pos:"Point Guard",era:"1996–2010",teams:"76ers, Nuggets, Pistons",gp:914,tier:2},
+  {name:"Chris Paul",sport:"NBA",pos:"Point Guard",era:"2005–present",teams:"Hornets, Clippers, Rockets",gp:1178,tier:2},
+  {name:"Dwyane Wade",sport:"NBA",pos:"Shooting Guard",era:"2003–2019",teams:"Heat, Bulls, Cavaliers",gp:1054,tier:2},
+  {name:"Kevin Garnett",sport:"NBA",pos:"Power Forward",era:"1995–2016",teams:"Timberwolves, Celtics, Nets",gp:1462,tier:2},
+  {name:"Isiah Thomas",sport:"NBA",pos:"Point Guard",era:"1981–1994",teams:"Detroit Pistons",gp:979,tier:2},
+  {name:"David Robinson",sport:"NBA",pos:"Center",era:"1989–2003",teams:"San Antonio Spurs",gp:987,tier:2},
+  {name:"Clyde Drexler",sport:"NBA",pos:"Shooting Guard",era:"1983–1998",teams:"Trail Blazers, Rockets",gp:1086,tier:2},
+  {name:"Tracy McGrady",sport:"NBA",pos:"Shooting Guard",era:"1997–2013",teams:"Raptors, Magic, Rockets",gp:938,tier:2},
+  {name:"Vince Carter",sport:"NBA",pos:"Shooting Guard",era:"1998–2020",teams:"Raptors, Nets, Magic",gp:1541,tier:2},
+  {name:"Carmelo Anthony",sport:"NBA",pos:"Small Forward",era:"2003–2022",teams:"Nuggets, Knicks, Thunder",gp:1260,tier:2},
+  {name:"Paul Pierce",sport:"NBA",pos:"Small Forward",era:"1998–2017",teams:"Celtics, Nets, Wizards",gp:1343,tier:3},
+  {name:"Ray Allen",sport:"NBA",pos:"Shooting Guard",era:"1996–2014",teams:"Bucks, SuperSonics, Celtics",gp:1300,tier:3},
+  {name:"Reggie Miller",sport:"NBA",pos:"Shooting Guard",era:"1987–2005",teams:"Indiana Pacers",gp:1389,tier:3},
+  {name:"Alonzo Mourning",sport:"NBA",pos:"Center",era:"1992–2008",teams:"Hornets, Heat, Nets",gp:769,tier:3},
+  {name:"Gary Payton",sport:"NBA",pos:"Point Guard",era:"1990–2007",teams:"SuperSonics, Bucks, Heat",gp:1335,tier:3},
+  {name:"Jason Kidd",sport:"NBA",pos:"Point Guard",era:"1994–2013",teams:"Mavericks, Nets, Knicks",gp:1391,tier:3},
+  {name:"Steve Nash",sport:"NBA",pos:"Point Guard",era:"1996–2014",teams:"Suns, Mavericks, Lakers",gp:1217,tier:3},
+  {name:"Manu Ginobili",sport:"NBA",pos:"Shooting Guard",era:"2002–2018",teams:"San Antonio Spurs",gp:1057,tier:3},
+  {name:"Tony Parker",sport:"NBA",pos:"Point Guard",era:"2001–2019",teams:"Spurs, Hornets",gp:1254,tier:3},
+  {name:"Pau Gasol",sport:"NBA",pos:"Power Forward",era:"2001–2019",teams:"Grizzlies, Lakers, Bulls",gp:1226,tier:3},
+  {name:"Detlef Schrempf",sport:"NBA",pos:"Small Forward",era:"1985–2001",teams:"Mavericks, Pacers, SuperSonics",gp:1038,tier:3},
+  {name:"Horace Grant",sport:"NBA",pos:"Power Forward",era:"1987–2004",teams:"Bulls, Magic, Lakers",gp:1165,tier:3},
+  {name:"Mitch Richmond",sport:"NBA",pos:"Shooting Guard",era:"1988–2002",teams:"Warriors, Kings, Wizards",gp:976,tier:3},
+  {name:"Dominique Wilkins",sport:"NBA",pos:"Small Forward",era:"1982–1999",teams:"Hawks, Clippers, Celtics",gp:1074,tier:3},
+
+  // ── NFL ──
+  {name:"Tom Brady",sport:"NFL",pos:"Quarterback",era:"2000–2022",teams:"Patriots, Buccaneers",gp:335,tier:1},
+  {name:"Jerry Rice",sport:"NFL",pos:"Wide Receiver",era:"1985–2004",teams:"49ers, Raiders, Seahawks",gp:303,tier:1},
+  {name:"Peyton Manning",sport:"NFL",pos:"Quarterback",era:"1998–2015",teams:"Colts, Broncos",gp:266,tier:1},
+  {name:"Barry Sanders",sport:"NFL",pos:"Running Back",era:"1989–1998",teams:"Detroit Lions",gp:153,tier:1},
+  {name:"Emmitt Smith",sport:"NFL",pos:"Running Back",era:"1990–2004",teams:"Cowboys, Cardinals",gp:226,tier:1},
+  {name:"Brett Favre",sport:"NFL",pos:"Quarterback",era:"1991–2010",teams:"Packers, Jets, Vikings",gp:302,tier:1},
+  {name:"Lawrence Taylor",sport:"NFL",pos:"Linebacker",era:"1981–1993",teams:"New York Giants",gp:184,tier:1},
+  {name:"Joe Montana",sport:"NFL",pos:"Quarterback",era:"1979–1994",teams:"49ers, Chiefs",gp:192,tier:1},
+  {name:"Walter Payton",sport:"NFL",pos:"Running Back",era:"1975–1987",teams:"Chicago Bears",gp:190,tier:1},
+  {name:"Patrick Mahomes",sport:"NFL",pos:"Quarterback",era:"2017–present",teams:"Kansas City Chiefs",gp:118,tier:1},
+  {name:"Randy Moss",sport:"NFL",pos:"Wide Receiver",era:"1998–2012",teams:"Vikings, Patriots, 49ers",gp:218,tier:2},
+  {name:"Reggie White",sport:"NFL",pos:"Defensive End",era:"1985–2000",teams:"Eagles, Packers, Panthers",gp:232,tier:2},
+  {name:"Dan Marino",sport:"NFL",pos:"Quarterback",era:"1983–1999",teams:"Miami Dolphins",gp:242,tier:2},
+  {name:"John Elway",sport:"NFL",pos:"Quarterback",era:"1983–1998",teams:"Denver Broncos",gp:234,tier:2},
+  {name:"Ray Lewis",sport:"NFL",pos:"Linebacker",era:"1996–2012",teams:"Baltimore Ravens",gp:228,tier:2},
+  {name:"Deion Sanders",sport:"NFL",pos:"Cornerback",era:"1989–2005",teams:"Falcons, 49ers, Cowboys",gp:188,tier:2},
+  {name:"LaDainian Tomlinson",sport:"NFL",pos:"Running Back",era:"2001–2011",teams:"Chargers, Jets",gp:170,tier:2},
+  {name:"Aaron Rodgers",sport:"NFL",pos:"Quarterback",era:"2005–present",teams:"Packers, Jets",gp:239,tier:2},
+  {name:"Tony Gonzalez",sport:"NFL",pos:"Tight End",era:"1997–2013",teams:"Chiefs, Falcons",gp:270,tier:2},
+  {name:"Troy Aikman",sport:"NFL",pos:"Quarterback",era:"1989–2000",teams:"Dallas Cowboys",gp:165,tier:2},
+  {name:"Drew Brees",sport:"NFL",pos:"Quarterback",era:"2001–2020",teams:"Chargers, Saints",gp:287,tier:2},
+  {name:"Adrian Peterson",sport:"NFL",pos:"Running Back",era:"2007–2021",teams:"Vikings, Saints, Commanders",gp:181,tier:2},
+  {name:"Rob Gronkowski",sport:"NFL",pos:"Tight End",era:"2010–2021",teams:"Patriots, Buccaneers",gp:143,tier:2},
+  {name:"Calvin Johnson",sport:"NFL",pos:"Wide Receiver",era:"2007–2015",teams:"Detroit Lions",gp:135,tier:2},
+  {name:"Ed Reed",sport:"NFL",pos:"Safety",era:"2002–2013",teams:"Ravens, Texans, Jets",gp:174,tier:2},
+  {name:"Steve Young",sport:"NFL",pos:"Quarterback",era:"1984–1999",teams:"USFL, Buccaneers, 49ers",gp:169,tier:2},
+  {name:"Bruce Smith",sport:"NFL",pos:"Defensive End",era:"1985–2003",teams:"Bills, Redskins",gp:279,tier:3},
+  {name:"Marcus Allen",sport:"NFL",pos:"Running Back",era:"1982–1997",teams:"Raiders, Chiefs",gp:222,tier:3},
+  {name:"Terrell Owens",sport:"NFL",pos:"Wide Receiver",era:"1996–2010",teams:"49ers, Eagles, Cowboys",gp:219,tier:3},
+  {name:"Richard Sherman",sport:"NFL",pos:"Cornerback",era:"2011–2021",teams:"Seahawks, 49ers, Buccaneers",gp:156,tier:3},
+  {name:"Marshawn Lynch",sport:"NFL",pos:"Running Back",era:"2007–2019",teams:"Bills, Seahawks, Raiders",gp:177,tier:3},
+  {name:"Antonio Brown",sport:"NFL",pos:"Wide Receiver",era:"2010–2021",teams:"Steelers, Raiders, Buccaneers",gp:154,tier:3},
+  {name:"Earl Thomas",sport:"NFL",pos:"Safety",era:"2010–2019",teams:"Seahawks, Ravens",gp:141,tier:3},
+  {name:"Von Miller",sport:"NFL",pos:"Linebacker",era:"2011–present",teams:"Broncos, Rams, Bills",gp:169,tier:3},
+  {name:"Frank Gore",sport:"NFL",pos:"Running Back",era:"2005–2020",teams:"49ers, Colts, Dolphins",gp:241,tier:3},
+  {name:"Larry Fitzgerald",sport:"NFL",pos:"Wide Receiver",era:"2004–2020",teams:"Arizona Cardinals",gp:256,tier:3},
+  {name:"Demarcus Ware",sport:"NFL",pos:"Linebacker",era:"2005–2016",teams:"Cowboys, Broncos",gp:167,tier:3},
+  {name:"Darrell Revis",sport:"NFL",pos:"Cornerback",era:"2007–2017",teams:"Jets, Patriots, Chiefs",gp:153,tier:3},
+  {name:"Anquan Boldin",sport:"NFL",pos:"Wide Receiver",era:"2003–2017",teams:"Cardinals, Ravens, 49ers",gp:214,tier:3},
+];
+
+// ── CONFIG ──
+const USE_BACKEND = false; // flip to true when backend is deployed
+const BACKEND_URL = '/api'; // your deployed API base URL
+
+// ── DIFFICULTY CONFIG ──
+const TIER_CONFIG = {
+  1: { label:'Rookie', desc:'All-time greats', cls:'active-1' },
+  2: { label:'Pro',    desc:'All-stars & franchise players', cls:'active-2' },
+  3: { label:'Legend', desc:'Deep cuts who met the GP threshold', cls:'active-3' },
+};
+const SPORT_GP_LABEL = { MLB:'≥162 GP',NHL:'≥82 GP',NBA:'≥82 GP',NFL:'≥16 GP' };
+const SPORT_BADGE_CLS = { MLB:'badge-mlb',NHL:'badge-nhl',NBA:'badge-nba',NFL:'badge-nfl' };
+const HINT_DEFS = [
+  {key:'era',   label:'Era',      icon:'📅', maxHit:'Triple'},
+  {key:'pos',   label:'Position', icon:'🎽', maxHit:'Double'},
+  {key:'teams', label:'Teams',    icon:'🏟', maxHit:'Single'},
+];
+
+// ── SEEDED RNG (for daily) ──
+function seededRNG(seed) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+function dateToSeed(dateStr) {
+  return dateStr.replace(/-/g,'').split('').reduce((a,c,i)=>a+c.charCodeAt(0)*(i+7),0);
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function seededShuffle(arr, rng) {
+  const a = [...arr];
+  for (let i=a.length-1;i>0;i--) { const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+// ── ATHLETE PREP ──
+ATHLETES.forEach(a => {
+  const parts = a.name.split(' ');
+  a.initials = parts.map(p=>p[0]).join('.');
+  a.lastName = parts[parts.length-1].toLowerCase();
+  a.nameLower = a.name.toLowerCase().replace(/[^a-z\s]/g,'');
+});
+
+// ── STATE ──
+const G = {
+  mode: 'daily',       // 'daily' | 'free'
+  sport: 'ALL',
+  tier: 1,
+  pool: [],
+  played: new Set(),
+  current: null,
+  hintsRevealed: 0,
+  outs: 0,
+  runs: 0,
+  bases: [false,false,false],
+  inning: 1,
+  stats: {hr:0,triple:0,double:0,single:0},
+  history: [],
+  roundDone: false,
+  dailyPlayed: false,
+  dailyDate: '',
+};
+
+// ── POOL MANAGEMENT ──
+function buildPool() {
+  let src = G.sport === 'ALL' ? ATHLETES : ATHLETES.filter(a=>a.sport===G.sport);
+  // In daily mode tier is fixed per puzzle; in free filter by tier
+  if (G.mode === 'free') {
+    if (G.tier === 1) src = src.filter(a=>a.tier===1);
+    else if (G.tier === 2) src = src.filter(a=>a.tier<=2);
+    // tier 3 = all
+  }
+  G.pool = src.filter(a=>!G.played.has(a.name));
+  shuffle(G.pool);
+}
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+}
+
+// ── DAILY LOGIC ──
+function getDailyAthlete() {
+  const date = todayStr();
+  const rng = seededRNG(dateToSeed(date));
+  const shuffled = seededShuffle(ATHLETES, rng);
+  return shuffled[0];
+}
+function checkDailyPlayed() {
+  try {
+    const key = `tig_daily_${todayStr()}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const data = JSON.parse(saved);
+      G.dailyPlayed = true;
+      G.dailyDate = todayStr();
+      return data;
+    }
+  } catch(e) {}
+  return null;
+}
+function saveDailyResult(resultData) {
+  try {
+    const key = `tig_daily_${todayStr()}`;
+    localStorage.setItem(key, JSON.stringify(resultData));
+  } catch(e) {}
+}
+
+// ── MODE / SPORT / TIER ──
+function toggleMode() {
+  if (G.mode === 'daily') {
+    G.mode = 'free';
+    document.getElementById('mode-toggle').className = 'mode-pill free-active';
+    document.getElementById('mode-toggle').textContent = '🎮 Free Play';
+    document.getElementById('diff-bar').style.display = 'flex';
+    document.getElementById('daily-banner').classList.remove('show');
+    document.getElementById('daily-done-banner').classList.remove('show');
+    enableSportTabs(true);
+    resetGame(false);
+    loadAthlete();
+  } else {
+    G.mode = 'daily';
+    document.getElementById('mode-toggle').className = 'mode-pill daily-active';
+    document.getElementById('mode-toggle').textContent = '📅 Daily';
+    document.getElementById('diff-bar').style.display = 'none';
+    enableSportTabs(false);
+    startDailyMode();
+  }
+}
+
+function enableSportTabs(enabled) {
+  document.querySelectorAll('.sport-tab').forEach(t => { t.disabled = !enabled; });
+}
+
+function selectSport(sport, el) {
+  if (G.mode === 'daily') return;
+  G.sport = sport;
+  document.querySelectorAll('.sport-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  G.played.clear();
+  buildPool();
+  resetRound();
+  loadAthlete();
+}
+
+function setTier(tier, el) {
+  if (G.mode === 'daily') return;
+  G.tier = tier;
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.className = 'diff-btn';
+  });
+  el.className = `diff-btn ${TIER_CONFIG[tier].cls}`;
+  document.getElementById('diff-desc').textContent = TIER_CONFIG[tier].desc;
+  G.played.clear();
+  buildPool();
+  resetRound();
+  loadAthlete();
+}
+
+// ── DAILY MODE ──
+function startDailyMode() {
+  const prevResult = checkDailyPlayed();
+  if (prevResult) {
+    showDailyAlreadyPlayed(prevResult);
+    return;
+  }
+  const athlete = getDailyAthlete();
+  G.current = athlete;
+  G.hintsRevealed = 0;
+  G.roundDone = false;
+  G.history = [];
+  resetScore();
+
+  const banner = document.getElementById('daily-banner');
+  banner.classList.add('show');
+  document.getElementById('daily-info').textContent = `Today · ${formatDate(todayStr())} · One attempt`;
+
+  showGameArea();
+  renderAthleteCard();
+  updateBoard();
+}
+
+function showDailyAlreadyPlayed(data) {
+  document.getElementById('go-card').classList.remove('show');
+  document.getElementById('game-area').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+
+  const banner = document.getElementById('daily-done-banner');
+  banner.classList.add('show');
+  document.getElementById('daily-done-date').textContent = formatDate(todayStr());
+
+  // Show results
+  if (data.stats) {
+    document.getElementById('go-hr').textContent = data.stats.hr;
+    document.getElementById('go-3b').textContent = data.stats.triple;
+    document.getElementById('go-2b').textContent = data.stats.double;
+    document.getElementById('go-1b').textContent = data.stats.single;
+    document.getElementById('go-runs').textContent = data.runs || 0;
+  }
+  if (data.history) {
+    document.getElementById('go-emoji').textContent = buildEmojiStr(data.history);
+  }
+  document.getElementById('go-card').classList.add('show');
+  document.getElementById('go-title').textContent = 'Today\'s puzzle complete!';
+  document.getElementById('go-sub').textContent = 'Your result:';
+  document.getElementById('new-inning-btn').style.display = 'none';
+}
+
+function formatDate(str) {
+  const [y,m,d] = str.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+}
+
+// ── LOAD ATHLETE ──
+async function loadAthlete() {
+  showLoading();
+  if (USE_BACKEND) {
+    try {
+      const params = new URLSearchParams({sport:G.sport,tier:G.tier});
+      const resp = await fetch(`${BACKEND_URL}/athlete?${params}`);
+      const data = await resp.json();
+      G.current = data;
+      G.current.nameLower = data.name.toLowerCase().replace(/[^a-z\s]/g,'');
+      G.current.lastName = data.name.split(' ').pop().toLowerCase();
+      G.current.initials = data.name.split(' ').map(p=>p[0]).join('.');
+    } catch(e) {
+      fallbackLoad();
+    }
+  } else {
+    fallbackLoad();
+  }
+  showGameArea();
+  renderAthleteCard();
+  updateBoard();
+}
+
+function fallbackLoad() {
+  if (G.pool.length === 0) { G.played.clear(); buildPool(); }
+  if (G.pool.length === 0) { showLoading(); return; }
+  G.current = G.pool.pop();
+  G.played.add(G.current.name);
+}
+
+// ── RENDER ──
+function showLoading() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('game-area').style.display = 'none';
+  document.getElementById('go-card').classList.remove('show');
+  document.getElementById('fb-bar').className = 'fb-bar';
+}
+
+function showGameArea() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('game-area').style.display = 'block';
+  document.getElementById('go-card').classList.remove('show');
+  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('input-wrap').style.display = 'flex';
+  const inp = document.getElementById('guess-input');
+  inp.value = '';
+  inp.disabled = false;
+  document.getElementById('guess-btn').disabled = false;
+  inp.focus();
+}
+
+function renderAthleteCard() {
+  if (!G.current) return;
+  const a = G.current;
+  const badge = document.getElementById('sport-badge');
+  badge.textContent = a.sport;
+  badge.className = `sport-badge ${SPORT_BADGE_CLS[a.sport]||''}`;
+  document.getElementById('initials-disp').textContent = a.initials;
+  document.getElementById('initials-meta').textContent = SPORT_GP_LABEL[a.sport] || '';
+  G.hintsRevealed = 0;
+  G.roundDone = false;
+  renderHints();
+}
+
+function renderHints() {
+  const area = document.getElementById('hints-area');
+  area.innerHTML = '';
+  HINT_DEFS.forEach((def,idx) => {
+    const row = document.createElement('div');
+    row.className = 'hint-row';
+
+    const icon = document.createElement('div');
+    icon.className = 'hint-icon';
+    icon.setAttribute('aria-hidden','true');
+    icon.textContent = def.icon;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'hint-lbl';
+    lbl.textContent = def.label;
+
+    row.appendChild(icon);
+    row.appendChild(lbl);
+
+    if (idx < G.hintsRevealed) {
+      const val = document.createElement('div');
+      val.className = 'hint-val';
+      val.textContent = G.current[def.key];
+      row.appendChild(val);
+    } else {
+      const locked = document.createElement('div');
+      locked.className = 'hint-locked';
+      locked.textContent = '—';
+      row.appendChild(locked);
+
+      if (!G.roundDone && G.outs < 3) {
+        const btn = document.createElement('button');
+        btn.className = 'reveal-btn';
+        btn.innerHTML = `Reveal <span class="hint-cost">(max ${def.maxHit})</span>`;
+        btn.onclick = () => { G.hintsRevealed = idx+1; renderHints(); };
+        row.appendChild(btn);
+      }
+    }
+    area.appendChild(row);
+  });
+}
+
+// ── GUESS ──
+function normName(s) { return s.toLowerCase().replace(/[^a-z\s]/g,'').trim(); }
+
+function submitGuess() {
+  if (!G.current || G.roundDone) return;
+  const raw = document.getElementById('guess-input').value.trim();
+  if (!raw) return;
+
+  const guess = normName(raw);
+  const correct =
+    guess === G.current.nameLower ||
+    guess === G.current.lastName ||
+    (guess.length > 3 && G.current.nameLower.includes(guess));
+
+  if (correct) {
+    resolveCorrect();
+  } else {
+    resolveIncorrect();
+  }
+}
+
+function resolveCorrect() {
+  G.roundDone = true;
+  const h = G.hintsRevealed;
+  let hitType, hitLabel, advance;
+  if (h===0){ hitType='hr';     hitLabel='HOME RUN!'; advance=4; G.stats.hr++; }
+  else if(h===1){ hitType='triple'; hitLabel='TRIPLE!';   advance=3; G.stats.triple++; }
+  else if(h===2){ hitType='double'; hitLabel='DOUBLE!';   advance=2; G.stats.double++; }
+  else          { hitType='single'; hitLabel='SINGLE!';   advance=1; G.stats.single++; }
+
+  advanceBases(advance);
+  G.history.push(hitType);
+
+  showFeedback('hit', `Correct! That's ${G.current.name}.`, hitLabel, hitType);
+  lockInput();
+  G.hintsRevealed = 3;
+  renderHints();
+  document.getElementById('next-btn').style.display = 'block';
+
+  if (G.mode === 'daily') {
+    endDailyRound();
+  }
+}
+
+function resolveIncorrect() {
+  G.outs++;
+  updateBoard();
+
+  if (G.outs >= 3) {
+    G.roundDone = true;
+    G.history.push('out');
+    showFeedback('out', `Out #3 — The answer was ${G.current.name}.`, '', '');
+    lockInput();
+    G.hintsRevealed = 3;
+    renderHints();
+    if (G.mode === 'daily') {
+      endDailyRound();
+    } else {
+      setTimeout(showGameOver, 1500);
+    }
+  } else {
+    showFeedback('out', `Out #${G.outs} — Wrong guess. Reveal a hint or try again.`, '', '');
+    document.getElementById('guess-input').value = '';
+    document.getElementById('guess-input').focus();
+  }
+}
+
+function lockInput() {
+  document.getElementById('input-wrap').style.display = 'none';
+  document.getElementById('guess-input').disabled = true;
+  document.getElementById('guess-btn').disabled = true;
+}
+
+function endDailyRound() {
+  const resultData = {
+    date: todayStr(),
+    stats: {...G.stats},
+    runs: G.runs,
+    history: [...G.history],
+    athlete: G.current.name,
+  };
+  saveDailyResult(resultData);
+  setTimeout(() => {
+    showGameOver(true);
+  }, 1500);
+}
+
+// ── BASES / SCORING ──
+function advanceBases(n) {
+  if (n===4) {
+    let rs=1; G.bases.forEach(b=>{if(b)rs++});
+    G.bases=[false,false,false]; G.runs+=rs;
+  } else {
+    for(let i=2;i>=0;i--){
+      if(G.bases[i]){
+        const np=i+n;
+        if(np>=3){G.runs++;G.bases[i]=false}else{G.bases[np]=true;G.bases[i]=false}
+      }
+    }
+    G.bases[n-1]=true;
+  }
+  updateBoard();
+}
+
+function updateBoard() {
+  document.getElementById('sc-runs').textContent = G.runs;
+  document.getElementById('sc-inning').textContent = G.inning;
+  document.getElementById('sc-hr').textContent = G.stats.hr;
+  document.getElementById('sc-outs').textContent = G.outs;
+  ['op1','op2','op3'].forEach((id,i)=>{
+    document.getElementById(id).className='opip'+(i<G.outs?' used':'');
+  });
+  ['base1','base2','base3'].forEach((id,i)=>{
+    document.getElementById(id).className='bsq'+(G.bases[i]?' lit':'');
+  });
+}
+
+// ── FEEDBACK ──
+function showFeedback(type, msg, hitLabel, hitType) {
+  const bar = document.getElementById('fb-bar');
+  bar.className = 'fb-bar ' + type;
+  document.getElementById('fb-icon').textContent = type==='hit'?'✓':type==='out'?'✗':'ℹ';
+  document.getElementById('fb-text').textContent = msg;
+  const badge = document.getElementById('fb-badge');
+  if (hitLabel) {
+    badge.textContent = hitLabel;
+    badge.className = `hit-badge ${hitType}`;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── GAME OVER ──
+function showGameOver(isDaily=false) {
+  document.getElementById('game-area').style.display = 'none';
+  const card = document.getElementById('go-card');
+  card.classList.add('show');
+
+  document.getElementById('go-hr').textContent = G.stats.hr;
+  document.getElementById('go-3b').textContent = G.stats.triple;
+  document.getElementById('go-2b').textContent = G.stats.double;
+  document.getElementById('go-1b').textContent = G.stats.single;
+  document.getElementById('go-runs').textContent = G.runs;
+  document.getElementById('go-emoji').textContent = buildEmojiStr(G.history);
+
+  if (isDaily) {
+    document.getElementById('go-title').textContent = '📅 Daily puzzle complete!';
+    document.getElementById('go-sub').textContent = formatDate(todayStr());
+    document.getElementById('new-inning-btn').style.display = 'none';
+  } else {
+    document.getElementById('go-title').textContent = '3 outs — inning over!';
+    document.getElementById('go-sub').textContent = 'Here\'s your stat line:';
+    document.getElementById('new-inning-btn').style.display = 'block';
+  }
+}
+
+function buildEmojiStr(history) {
+  const m = {hr:'🟢',triple:'🟡',double:'🔵',single:'⬜',out:'🔴'};
+  return history.map(h=>m[h]||'⬜').join('');
+}
+
+// ── SHARE ──
+function shareResult() {
+  const sport = G.sport === 'ALL' ? 'All Sports' : G.sport;
+  const tier = G.mode === 'free' ? ` · ${TIER_CONFIG[G.tier].label}` : '';
+  const dateLabel = G.mode === 'daily' ? `📅 Daily ${formatDate(todayStr())}` : `🎮 Free Play`;
+  const emoji = buildEmojiStr(G.history);
+  const text = [
+    `The Initials Game`,
+    `${dateLabel} · ${sport}${tier}`,
+    emoji,
+    `Runs: ${G.runs} | HR: ${G.stats.hr} | 3B: ${G.stats.triple} | 2B: ${G.stats.double} | 1B: ${G.stats.single}`,
+  ].join('\n');
+
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('share-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>btn.textContent='📋 Copy result',2200);
+  }).catch(()=>{
+    // fallback for no clipboard access
+    prompt('Copy your result:', text);
+  });
+}
+
+// ── NEXT / RESET ──
+function nextAthlete() {
+  if (G.outs >= 3) { showGameOver(); return; }
+  document.getElementById('fb-bar').className = 'fb-bar';
+  document.getElementById('next-btn').style.display = 'none';
+  buildPool();
+  if (USE_BACKEND) {
+    loadAthlete();
+  } else {
+    fallbackLoad();
+    showGameArea();
+    renderAthleteCard();
+    updateBoard();
+  }
+}
+
+function resetScore() {
+  G.outs = 0; G.runs = 0; G.bases = [false,false,false];
+  G.stats = {hr:0,triple:0,double:0,single:0}; G.history = [];
+}
+
+function resetRound() {
+  G.roundDone = false; G.hintsRevealed = 0;
+  document.getElementById('fb-bar').className = 'fb-bar';
+}
+
+function resetGame(keepInning) {
+  resetScore();
+  resetRound();
+  if (!keepInning) G.inning = 1;
+  else G.inning++;
+  G.played.clear();
+  updateBoard();
+}
+
+function newInning() {
+  resetGame(true);
+  buildPool();
+  document.getElementById('go-card').classList.remove('show');
+  document.getElementById('daily-done-banner').classList.remove('show');
+  loadAthlete();
+}
+
+// ── HELP MODAL ──
+function showHelp() { document.getElementById('modal').classList.add('show'); }
+function hideHelp() { document.getElementById('modal').classList.remove('show'); }
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideHelp();
+  if (document.getElementById('modal').classList.contains('show')) return;
+  if (e.key === 'Enter') {
+    const nextVisible = document.getElementById('next-btn').style.display !== 'none';
+    if (nextVisible) nextAthlete();
+  }
+});
+document.getElementById('guess-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitGuess();
+});
+
+// ── INIT ──
+(function init() {
+  // Start in daily mode
+  document.getElementById('diff-bar').style.display = 'none';
+  enableSportTabs(false);
+  buildPool();
+  startDailyMode();
+})();
+</script>
+</body>
+</html>
